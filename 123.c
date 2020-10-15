@@ -1,63 +1,154 @@
 #include <stdio.h>
-#include <malloc.h>
-#include <windows.h>
-#pragma warning(disable : 4996)
+#include <stdlib.h>
+#include <string.h>
 
-typedef struct graph { 
-    int point1; 
-    int point2; 
-} graph;
+char *getarray(void){
+    int n=1;
+    char *arr,c;
+    arr = calloc(n+1, sizeof(char));
 
-int main() {
-    SetConsoleCP(1251);
-    SetConsoleOutputCP(1251);
-    FILE *file = fopen("table.dot", "w"); 
-    int punkt, n, m, mn[10][10], stat = 0;
-    graph *table = (graph*)malloc(sizeof(graph));
-    fprintf(file, "graph G {");
-    fprintf(file, "\n");
-    printf("Введите число вершин графа > ");
-    scanf("%d%*c", &n);
-    for (int wide = 1; wide < (n + 1); ++wide) {
-        for (int len = 1; len < (n + 1); ++len) {
-            mn[wide][len] = 0;
+    int i = 0;
+    while((c=getchar()) != ';'){
+        if( ('0' <= c && c <= '9') || ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z')){ //[a-zA-Z0-9]
+            char *temp_arr;
+            temp_arr = calloc(n+1, sizeof(char));
+            
+            for(int j = 0; j < n; j++){
+                temp_arr[j] = arr[j];
+            }
+            temp_arr[n-1] = c;
+            n++;
+            i++;
+            free(arr);
+            arr = temp_arr;
+        }
+        else if(c == '\n'){
+            arr[n]='\0';
+            return arr;
         }
     }
-    for (int i = 1; i < (n + 1); i++) {
-        fprintf(file, "%d;", i);
-        fprintf(file, "\n");
+    arr[n-1]='\0';
+    return arr;
+}
+
+int main(){
+    int graph;
+    printf("1 - graph\n2 - digraph\n# ");
+    scanf("%d", &graph);
+    
+    if(!( graph == 1 || graph == 2 ))
+        exit(9);
+    
+    printf("Amount: ");
+    int n;
+    scanf("%d",&n);
+    if (n <= 0)
+        exit(9);
+    
+    char *name[n];
+    int conn[n][n];
+    for(int i=0; i<n; i++){
+        for(int j=0; j<n; j++){
+            conn[i][j] = 0;
+        }
     }
-    printf("Введите количество ребер > ");
-    scanf("%d%*c", &m);
-    table = (graph*)realloc(table, m * sizeof(graph));
-    printf("Введите ребра в формате (Вершина 1 - Вершина 2) > ");
-    for (int i = 0; i < m; i++) {
-        scanf("%d - %d", &table[i].point1, &table[i].point2);
-        mn[table[i].point1][table[i].point2]++;
-        mn[table[i].point2][table[i].point1]++;
-        fprintf(file, "%d -- %d;", table[i].point1, table[i].point2);
-        fprintf(file, "\n");
-    }
-    for (int wide = 1; wide < (n + 1); ++wide) {
-        for (int len = 1; len < (n + 1); ++len) {
-            printf("%d ", mn[wide][len]);
-            if (mn[wide][len] > 1) {
-                stat = 1;
+    
+    printf("Enter names:\n");
+    getchar();
+        
+    for(int i=0; i<n; i++){
+        printf("# ");
+        name[i] = getarray();
+        
+        for (int j=0; j<i; j++){
+            if( strcmp(name[i], name[j]) == 0){
+                printf("There are similar elements, enter another...\n");
+                i--;
             }
+        }
+    }
+            
+    printf("Enter connection\n");
+    for(int i=0; i<n; i++){
+        printf("%d# ",i);
+        _Bool flag=1;
+        while(flag){
+            char *compare;
+            compare = getarray();
+            
+            for(int j=0; j<n; j++){
+                if( strcmp(compare, name[j]) == 0){
+                    conn[i][j]++;
+                }
+            }
+
+            if(strcmp(compare, "") == 0){
+                flag = 0;
+            }
+            free(compare);
+        }
+    }
+    
+    printf("\n");
+    _Bool relat_graph = 1;
+    for(int i=0; i<n; i++){
+        _Bool temp_relat_graph = 0;
+        for(int j=0; j<n; j++){
+            if(conn[i][j] == 1)
+                temp_relat_graph = 1;
+            
+            if(conn[j][i] == 1)
+                temp_relat_graph = 1;
+        }
+        if(temp_relat_graph == 0)
+            relat_graph=0;
+    }
+    if(relat_graph == 0){
+        printf("unrelated\n");
+    } else {
+        printf("related\n");
+
+    }
+    printf("Connection table\n");
+    for(int i=0; i<n; i++) {
+        printf("%s\t", name[i]);
+        for (int j=0; j<n; j++) {
+            printf("%d ", conn[i][j]);
         }
         printf("\n");
     }
-    if ((m > (((n - 1) * (n - 2)) / 2)) && (stat == 0)) {
-        printf("Граф является связным");
+    
+    
+    FILE *file=fopen("graph.dot", "w");
+    if(file == NULL) {
+        printf("Unable to create file\n");
+        exit(0);
     }
-    else if (stat == 1) {
-        printf("Граф не является простым (теорема для него не работает)");
+    
+    char arr[3] = "";
+    if(graph == 2){
+        fputs("digraph G {", file);
+        strcat(arr, "->");
+    } else {
+        fputs("graph G {", file);
+        strcat(arr, "--");
     }
-    else {
-        printf("Граф не является связным");
+
+    for(int i=0; i<n; i++){
+        fputs(name[i], file);
+        fputs("; ", file);
     }
-    fprintf(file, "}");
-    fclose(file); 
-    free(table);
+    for(int i=0; i<n; i++){
+        for(int j=0; j<n; j++){
+            for(int k=0; k<conn[i][j]; k++){
+                fputs(name[i], file);
+                fputs(arr, file);
+                fputs(name[j], file);
+                fputs("; ", file);
+            }
+        }
+    }
+    fputs("}", file);
+
     return 0;
 }
